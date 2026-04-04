@@ -10,6 +10,7 @@ library(ggplot2)
 library(ggridges)
 library(viridis)
 library(pheatmap)
+library(tibble)
 
 
 # read in data... haha nice pun ;)
@@ -152,4 +153,43 @@ matchups <- expand.grid(
 results <- matchups |>
   rowwise() |>
   mutate(fight_result = list(fight(heatmap_data, prod1, prod2))) |>
-  unnest(cols = c(fight_result))
+  unnest(cols = c(fight_result)) |>
+  mutate(win_percentage_match = (wins1 / (wins1 + wins2 + draws)) * 100)
+
+# create league table
+league_table <- results |>
+  group_by(product1) |>
+  summarise(
+    wins = sum(wins1),
+    losses = sum(wins2),
+    draws = sum(draws),
+    total_matches = wins + losses + draws,
+    win_percentage = (wins / total_matches) * 100
+  ) |>
+  arrange(desc(win_percentage))
+
+# visualise league table
+ggplot(league_table, aes(x = reorder(product1, win_percentage), y = win_percentage)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  theme_minimal() +
+  labs(x = "Food Type", y = "Win Percentage") +
+  theme(legend.position = "none")
+
+# create a heatmap of the fight results
+fight_matrix <- results |>
+  select(product1, product2, win_percentage_match) |>
+  pivot_wider(names_from = product2, values_from = win_percentage_match, values_fill = 0)
+
+# move the last row to be first
+fight_matrix1 <- fight_matrix |>
+  slice(c(n(), 1:(n() - 1)))
+
+# turn the first column into row names and remove it from the data frame
+fight_matrix1 <- fight_matrix1 |>
+  column_to_rownames(var = "product1")
+
+# order the columns and rows to match the league table
+fight_matrix1 <- fight_matrix1[league_table$product1, league_table$product1]
+
+pheatmap(fight_matrix1, cluster_rows = FALSE, cluster_cols = FALSE, display_numbers = TRUE, number_format = "%.0f", main = "Win Percentage Matchup Heatmap")
