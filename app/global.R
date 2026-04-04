@@ -11,6 +11,8 @@ library(ggridges)
 library(viridis)
 library(pheatmap)
 library(tibble)
+library(purrr)
+library(BradleyTerry2)
 
 
 # read in data... haha nice pun ;)
@@ -150,6 +152,7 @@ matchups <- expand.grid(
 ) |>
   filter(prod1 != prod2)
 
+# Use original data for win percentage calculations
 results <- matchups |>
   rowwise() |>
   mutate(fight_result = list(fight(heatmap_data, prod1, prod2))) |>
@@ -193,3 +196,63 @@ fight_matrix1 <- fight_matrix1 |>
 fight_matrix1 <- fight_matrix1[league_table$product1, league_table$product1]
 
 pheatmap(fight_matrix1, cluster_rows = FALSE, cluster_cols = FALSE, display_numbers = TRUE, number_format = "%.0f", main = "Win Percentage Matchup Heatmap")
+
+
+# BRADLEY-TERRY MODEL for sophisticated ranking
+cat("Fitting Bradley-Terry model...\n")
+
+# Create Bradley-Terry comparison matrix
+bt_data <- results |>
+  mutate(
+    player1 = product1,
+    player2 = product2,
+    wins1 = wins1,
+    wins2 = wins2
+  ) |>
+  select(player1, player2, wins1, wins2)
+
+# Fit Bradley-Terry model
+bt_model <- BTm(cbind(wins1, wins2), player1, player2, data = bt_data)
+bt_abilities <- BTabilities(bt_model)
+
+# Convert to rankings
+bt_rankings <- data.frame(
+  product = names(bt_abilities[, 1]),
+  bt_ability = bt_abilities[, 1],
+  bt_std_error = bt_abilities[, 2],
+  stringsAsFactors = FALSE
+) |>
+  arrange(desc(bt_ability)) |>
+  left_join(league_table, by = c("product" = "product1")) |>
+  mutate(
+    bt_rank = row_number(),
+    win_pct_rank = rank(desc(win_percentage), ties.method = "min")
+  )
+
+# Display top 10 Bradley-Terry rankings
+cat("\n=== TOP 10 BRADLEY-TERRY RANKINGS ===\n")
+print(bt_rankings[1:10, c("bt_rank", "product", "bt_ability", "win_percentage")])
+
+# Correlation between Bradley-Terry and win percentage
+bt_correlation <- cor(bt_rankings$bt_ability, bt_rankings$win_percentage, use = "complete.obs")
+cat("\nBradley-Terry correlation with win %:", round(bt_correlation, 3), "\n")
+
+# Bradley-Terry vs Win Percentage comparison plot
+ggplot(bt_rankings, aes(x = bt_ability, y = win_percentage)) +
+  geom_point(color = "steelblue", size = 3) +
+  geom_text(aes(label = product), vjust = -0.5, hjust = 0.5) +
+  theme_minimal() +
+  labs(
+    x = "Bradley-Terry Ability",
+    y = "Win Percentage",
+    title = "Bradley-Terry Model vs Win Percentage",
+    subtitle = paste("Correlation:", round(bt_correlation, 3))
+  ) +
+  theme(legend.position = "none") +
+  geom_smooth(method = "lm", se = FALSE, color = "red", alpha = 0.5)
+
+# Summary statistics
+cat("\n=== SUMMARY ===\n")
+cat("Number of food items:", nrow(bt_rankings), "\n")
+cat("Bradley-Terry model fit successful\n")
+cat("Use bt_rankings for final potato rankings\n")
