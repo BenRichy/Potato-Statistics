@@ -13,16 +13,16 @@ library(pheatmap)
 library(tibble)
 library(purrr)
 library(BradleyTerry2)
+library(ggridges)
+
+# load in data
+load("app/data/raw_potato_data.RData")
+load("app/data/heatmap_data.RData")
+load("app/data/fight_results.RData")
+load("app/data/bt_abilities.RData")
 
 
-# read in data... haha nice pun ;)
-raw_potato_data <- read_csv("app/data/Potato Ranking Form.csv") |>
-  pivot_longer(
-    cols = 3:36,
-    names_to = "food_type",
-    values_to = "score"
-  )
-
+# summarise data by food type
 raw_potato_data_summarise <- raw_potato_data |>
   group_by(food_type) |>
   summarise(
@@ -33,13 +33,19 @@ raw_potato_data_summarise <- raw_potato_data |>
   arrange(desc(mean_score))
 
 # box and whisker plot of results
+# reorder food types by mean score for better visualization
+# add a nice looking theme
 ggplot(
   data = raw_potato_data,
-  aes(x = score, y = reorder(food_type, score, mean))
+  aes(y = reorder(food_type, score, mean), x = score)
 ) +
-  geom_boxplot() +
+  geom_boxplot(fill = "steelblue", alpha = 0.7) +
   theme_minimal() +
-  theme(legend.position = "none")
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    legend.position = "none"
+  ) +
+  labs(y = "Food Type", x = "Score", title = "Box Plot of Potato Rankings")
 
 # heatmap of results
 # individual scores
@@ -56,24 +62,7 @@ ggplot(
   )
 
 # clustered heatmap
-heatmap_data <- raw_potato_data |>
-  pivot_wider(names_from = food_type, values_from = score) |>
-  select(-c("Timestamp", "Name"))
-
-pheatmap(heatmap_data, cluster_rows = TRUE, cluster_cols = TRUE)
-
-# stacked bar chart of results
-ggplot(
-  data = raw_potato_data,
-  aes(x = food_type, fill = factor(score))
-) +
-  geom_bar(position = "fill") +
-  scale_fill_viridis_d() +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-    legend.position = "none"
-  )
+pheatmap(heatmap_data, cluster_rows = FALSE, cluster_cols = FALSE)
 
 
 # number of times each food type was ranked at the top (9 or 10)
@@ -107,57 +96,6 @@ ggplot(
   labs(x = "Average Score", y = "Standard Deviation of Scores") +
   theme(legend.position = "none")
 
-
-# PCA plot of results
-# pca_data <- raw_potato_data |>
-#   pivot_wider(names_from = food_type, values_from = score) |>
-#   select(-c("Timestamp", "Name"))
-
-# library(FactoMineR)
-# library(factoextra)
-# pca_result <- PCA(pca_data, graph = FALSE)
-# fviz_pca_var(pca_result, label = "none", habillage = pca_data$Name) +
-#   theme_minimal() +
-#   labs(title = "PCA of Potato Rankings") +
-#   theme(legend.position = "right")
-
-
-# google fight style functionality
-
-# create a function to compare two food types
-fight <- function(df, prod1, prod2) {
-  r1 <- df[[prod1]]
-  r2 <- df[[prod2]]
-
-  wins1 <- sum(r1 > r2, na.rm = TRUE)
-  wins2 <- sum(r2 > r1, na.rm = TRUE)
-  draws <- sum(r1 == r2, na.rm = TRUE)
-
-  data.frame(
-    product1 = prod1,
-    product2 = prod2,
-    wins1 = wins1,
-    wins2 = wins2,
-    draws = draws
-  )
-}
-
-fight(heatmap_data, "Mashed Potatoes", "Thrice-Cooked Chips")
-
-# run all matchups against each other
-# remove person and timestamp columns
-matchups <- expand.grid(
-  prod1 = unique(raw_potato_data$food_type),
-  prod2 = unique(raw_potato_data$food_type)
-) |>
-  filter(prod1 != prod2)
-
-# Use original data for win percentage calculations
-results <- matchups |>
-  rowwise() |>
-  mutate(fight_result = list(fight(heatmap_data, prod1, prod2))) |>
-  unnest(cols = c(fight_result)) |>
-  mutate(win_percentage_match = (wins1 / (wins1 + wins2 + draws)) * 100)
 
 # create league table
 league_table <- results |>
@@ -198,23 +136,6 @@ fight_matrix1 <- fight_matrix1[league_table$product1, league_table$product1]
 pheatmap(fight_matrix1, cluster_rows = FALSE, cluster_cols = FALSE, display_numbers = TRUE, number_format = "%.0f", main = "Win Percentage Matchup Heatmap")
 
 
-# BRADLEY-TERRY MODEL for sophisticated ranking
-cat("Fitting Bradley-Terry model...\n")
-
-# Create Bradley-Terry comparison matrix
-bt_data <- results |>
-  mutate(
-    player1 = product1,
-    player2 = product2,
-    wins1 = wins1,
-    wins2 = wins2
-  ) |>
-  select(player1, player2, wins1, wins2)
-
-# Fit Bradley-Terry model
-bt_model <- BTm(cbind(wins1, wins2), player1, player2, data = bt_data)
-bt_abilities <- BTabilities(bt_model)
-
 # Convert to rankings
 bt_rankings <- data.frame(
   product = names(bt_abilities[, 1]),
@@ -251,8 +172,53 @@ ggplot(bt_rankings, aes(x = bt_ability, y = win_percentage)) +
   theme(legend.position = "none") +
   geom_smooth(method = "lm", se = FALSE, color = "red", alpha = 0.5)
 
-# Summary statistics
-cat("\n=== SUMMARY ===\n")
-cat("Number of food items:", nrow(bt_rankings), "\n")
-cat("Bradley-Terry model fit successful\n")
-cat("Use bt_rankings for final potato rankings\n")
+
+# ===== ADVANCED VISUALIZATIONS FOR RANKING DATA =====
+
+# 1. RIDGE PLOTS - Much better than violin plots for discrete ratings
+
+ggplot(raw_potato_data, aes(x = score, y = reorder(food_type, score, mean), fill = after_stat(x))) +
+  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01, alpha = 0.8) +
+  scale_fill_viridis_c(name = "Score", option = "C") +
+  theme_minimal() +
+  labs(
+    title = "Distribution of Ratings by Food Type",
+    subtitle = "Ridge plots show rating patterns better than box plots",
+    x = "Rating (1-10)",
+    y = "Food Type"
+  ) +
+  theme(legend.position = "right")
+
+# 4. SLOPE GRAPH - Compare different ranking methods
+ranking_comparison <- bt_rankings |>
+  select(product, bt_rank, win_pct_rank) |>
+  pivot_longer(cols = c(bt_rank, win_pct_rank), names_to = "method", values_to = "rank") |>
+  mutate(method = case_when(
+    method == "bt_rank" ~ "Bradley-Terry",
+    method == "win_pct_rank" ~ "Win Percentage"
+  ))
+
+ggplot(ranking_comparison, aes(x = method, y = -rank, group = product)) +
+  geom_line(alpha = 0.6, color = "gray60") +
+  geom_point(aes(color = method), size = 2) +
+  geom_text(
+    data = ranking_comparison |> filter(method == "Bradley-Terry"),
+    aes(label = product), hjust = 1, nudge_x = -0.1, size = 3
+  ) +
+  geom_text(
+    data = ranking_comparison |> filter(method == "Win Percentage"),
+    aes(label = paste("#", rank)), hjust = 0, nudge_x = 0.1, size = 3
+  ) +
+  scale_color_manual(values = c("Bradley-Terry" = "steelblue", "Win Percentage" = "orange")) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    axis.text.y = element_blank(),
+    panel.grid.major.y = element_blank()
+  ) +
+  labs(
+    title = "Ranking Method Comparison",
+    subtitle = "How do Bradley-Terry vs Win % rankings differ?",
+    x = "Ranking Method",
+    y = "Rank (higher = better)"
+  )
