@@ -3,6 +3,7 @@
 
 # load in packages
 library(shiny)
+library(shinydashboard)
 library(dplyr)
 library(readr)
 library(tidyr)
@@ -16,10 +17,10 @@ library(BradleyTerry2)
 library(ggridges)
 
 # load in data
-load("app/data/raw_potato_data.RData")
-load("app/data/heatmap_data.RData")
-load("app/data/fight_results.RData")
-load("app/data/bt_abilities.RData")
+load("data/raw_potato_data.RData")
+load("data/heatmap_data.RData")
+load("data/fight_results.RData")
+load("data/bt_abilities.RData")
 
 
 # summarise data by food type
