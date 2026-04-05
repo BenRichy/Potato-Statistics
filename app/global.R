@@ -14,6 +14,7 @@ library(pheatmap)
 library(tibble)
 library(purrr)
 library(BradleyTerry2)
+library(reshape2)
 library(ggridges)
 
 # load in data
@@ -86,16 +87,6 @@ ggplot(
     legend.position = "none"
   )
 
-# average vs variability plot
-ggplot(
-  data = raw_potato_data_summarise,
-  aes(x = mean_score, y = sd_score, label = food_type)
-) +
-  geom_point(color = "steelblue", size = 3) +
-  geom_text(vjust = -0.5, hjust = 0.5) +
-  theme_minimal() +
-  labs(x = "Average Score", y = "Standard Deviation of Scores") +
-  theme(legend.position = "none")
 
 
 # create league table
@@ -134,7 +125,7 @@ fight_matrix1 <- fight_matrix1 |>
 # order the columns and rows to match the league table
 fight_matrix1 <- fight_matrix1[league_table$product1, league_table$product1]
 
-pheatmap(fight_matrix1, cluster_rows = FALSE, cluster_cols = FALSE, display_numbers = TRUE, number_format = "%.0f", main = "Win Percentage Matchup Heatmap")
+
 
 
 # Convert to rankings
@@ -178,17 +169,7 @@ ggplot(bt_rankings, aes(x = bt_ability, y = win_percentage)) +
 
 # 1. RIDGE PLOTS - Much better than violin plots for discrete ratings
 
-ggplot(raw_potato_data, aes(x = score, y = reorder(food_type, score, mean), fill = after_stat(x))) +
-  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01, alpha = 0.8) +
-  scale_fill_viridis_c(name = "Score", option = "C") +
-  theme_minimal() +
-  labs(
-    title = "Distribution of Ratings by Food Type",
-    subtitle = "Ridge plots show rating patterns better than box plots",
-    x = "Rating (1-10)",
-    y = "Food Type"
-  ) +
-  theme(legend.position = "right")
+
 
 # 4. SLOPE GRAPH - Compare different ranking methods
 ranking_comparison <- bt_rankings |>
