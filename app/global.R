@@ -16,6 +16,10 @@ library(purrr)
 library(BradleyTerry2)
 library(reshape2)
 library(ggridges)
+library(DT)
+library(visNetwork)
+library(plotly)
+library(scales)
 
 # load in data
 load("data/raw_potato_data.RData")
@@ -34,20 +38,6 @@ raw_potato_data_summarise <- raw_potato_data |>
   ) |>
   arrange(desc(mean_score))
 
-# box and whisker plot of results
-# reorder food types by mean score for better visualization
-# add a nice looking theme
-ggplot(
-  data = raw_potato_data,
-  aes(y = reorder(food_type, score, mean), x = score)
-) +
-  geom_boxplot(fill = "steelblue", alpha = 0.7) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-    legend.position = "none"
-  ) +
-  labs(y = "Food Type", x = "Score", title = "Box Plot of Potato Rankings")
 
 # heatmap of results
 # individual scores
@@ -74,20 +64,6 @@ top_rank_counts <- raw_potato_data |>
   summarise(count = n()) |>
   arrange(desc(count))
 
-# bar chart of top rank counts
-ggplot(
-  data = top_rank_counts,
-  aes(x = reorder(food_type, count), y = count)
-) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  theme_minimal() +
-  labs(x = "Food Type", y = "Count of Top Ranks (9 or 10)") +
-  theme(
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-    legend.position = "none"
-  )
-
-
 
 # create league table
 league_table <- results |>
@@ -101,13 +77,6 @@ league_table <- results |>
   ) |>
   arrange(desc(win_percentage))
 
-# visualise league table
-ggplot(league_table, aes(x = reorder(product1, win_percentage), y = win_percentage)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  coord_flip() +
-  theme_minimal() +
-  labs(x = "Food Type", y = "Win Percentage") +
-  theme(legend.position = "none")
 
 # create a heatmap of the fight results
 fight_matrix <- results |>
@@ -150,19 +119,6 @@ print(bt_rankings[1:10, c("bt_rank", "product", "bt_ability", "win_percentage")]
 bt_correlation <- cor(bt_rankings$bt_ability, bt_rankings$win_percentage, use = "complete.obs")
 cat("\nBradley-Terry correlation with win %:", round(bt_correlation, 3), "\n")
 
-# Bradley-Terry vs Win Percentage comparison plot
-ggplot(bt_rankings, aes(x = bt_ability, y = win_percentage)) +
-  geom_point(color = "steelblue", size = 3) +
-  geom_text(aes(label = product), vjust = -0.5, hjust = 0.5) +
-  theme_minimal() +
-  labs(
-    x = "Bradley-Terry Ability",
-    y = "Win Percentage",
-    title = "Bradley-Terry Model vs Win Percentage",
-    subtitle = paste("Correlation:", round(bt_correlation, 3))
-  ) +
-  theme(legend.position = "none") +
-  geom_smooth(method = "lm", se = FALSE, color = "red", alpha = 0.5)
 
 
 # ===== ADVANCED VISUALIZATIONS FOR RANKING DATA =====
