@@ -25,7 +25,18 @@ ui <- dashboardPage(
                 tabName = "home",
                 h2("Welcome to the Potato Rankings App"),
                 p("This app allows you to explore the results of our potato ranking survey. Choose a section below to get started:"),
-                br(),
+
+                # Data freshness notice
+                div(
+                    class = "alert alert-warning",
+                    style = "background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 10px; border-radius: 5px; margin: 15px 0;",
+                    p(icon("info-circle"),
+                        strong("Data Updates:"),
+                        "Survey responses are processed every 4 hours. New submissions may take up to 6 hours to appear in the results.",
+                        style = "margin: 0; font-size: 14px;"
+                    )
+                ),
+
                 # Summary Statistics Cards
                 fluidRow(
                     valueBoxOutput("total_responses", width = 3),
@@ -139,6 +150,16 @@ ui <- dashboardPage(
                 h2("Join the Potato Rankings Survey!"),
                 p("Want to add your potato preferences to our analysis? Fill out our survey form below:"),
                 br(),
+                # Important notice about data processing
+                div(
+                    class = "alert alert-info",
+                    style = "background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 15px; border-radius: 5px; margin-bottom: 20px;",
+                    h5(icon("clock"), " Data Processing Notice", style = "margin-top: 0; color: #0c5460;"),
+                    p(strong("Important:"), "After completing the survey, your responses won't appear in the app immediately.", style = "margin-bottom: 8px;"),
+                    p("• Data is automatically processed every 4 hours", style = "margin-bottom: 5px;"),
+                    p("• It may take up to 6 hours for your results to appear in the visualizations", style = "margin-bottom: 5px;"),
+                    p("• The app updates automatically - no need to refresh manually", style = "margin-bottom: 0;")
+                ),
                 div(
                     style = "text-align: center; margin: 20px;",
                     a(

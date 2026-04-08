@@ -33,16 +33,30 @@ load_data_from_github <- function(filename) {
   tryCatch(
     {
       download.file(base_url, temp_file, mode = "wb", quiet = TRUE)
-      load(temp_file)
-      return(get(ls()[1])) # Return the first (and presumably only) object
+      # Create a new environment to load into
+      env <- new.env()
+      load(temp_file, envir = env)
+      # Get the first (and presumably only) object from the environment
+      obj_names <- ls(env)
+      if (length(obj_names) > 0) {
+        return(get(obj_names[1], envir = env))
+      } else {
+        stop("No objects found in .RData file")
+      }
     },
     error = function(e) {
       # Fallback to local files if GitHub download fails
       warning(paste("Failed to load", filename, "from GitHub, trying local file:", e$message))
       local_path <- paste0("data/", filename)
       if (file.exists(local_path)) {
-        load(local_path)
-        return(get(ls()[1]))
+        env <- new.env()
+        load(local_path, envir = env)
+        obj_names <- ls(env)
+        if (length(obj_names) > 0) {
+          return(get(obj_names[1], envir = env))
+        } else {
+          stop("No objects found in local .RData file")
+        }
       } else {
         stop(paste("Could not load", filename, "from GitHub or locally"))
       }
