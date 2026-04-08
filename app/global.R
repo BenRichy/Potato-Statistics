@@ -23,7 +23,7 @@ library(httr)
 
 # GitHub repository information
 github_repo <- "BenRichy/Potato-Statistics" # Update this to match your actual GitHub username/repo
-github_branch <- "google_sheet_integration" # or "master" depending on your default branch
+github_branch <- "main" # or "master" depending on your default branch
 
 # Function to load data from GitHub
 load_data_from_github <- function(filename) {
