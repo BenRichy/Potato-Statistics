@@ -1,6 +1,5 @@
 # global.R
 
-
 # load in packages
 library(shiny)
 library(shinydashboard)
@@ -20,12 +19,42 @@ library(DT)
 library(visNetwork)
 library(plotly)
 library(scales)
+library(httr)
 
-# load in data
-load("data/raw_potato_data.RData")
-load("data/heatmap_data.RData")
-load("data/fight_results.RData")
-load("data/bt_abilities.RData")
+# GitHub repository information
+github_repo <- "BenRichy/Potato-Statistics" # Update this to match your actual GitHub username/repo
+github_branch <- "google_sheet_integration" # or "master" depending on your default branch
+
+# Function to load data from GitHub
+load_data_from_github <- function(filename) {
+  base_url <- paste0("https://github.com/", github_repo, "/raw/", github_branch, "/app/data/", filename)
+  temp_file <- tempfile(fileext = ".RData")
+
+  tryCatch(
+    {
+      download.file(base_url, temp_file, mode = "wb", quiet = TRUE)
+      load(temp_file)
+      return(get(ls()[1])) # Return the first (and presumably only) object
+    },
+    error = function(e) {
+      # Fallback to local files if GitHub download fails
+      warning(paste("Failed to load", filename, "from GitHub, trying local file:", e$message))
+      local_path <- paste0("data/", filename)
+      if (file.exists(local_path)) {
+        load(local_path)
+        return(get(ls()[1]))
+      } else {
+        stop(paste("Could not load", filename, "from GitHub or locally"))
+      }
+    }
+  )
+}
+
+# load in data from GitHub (with local fallback)
+raw_potato_data <- load_data_from_github("raw_potato_data.RData")
+heatmap_data <- load_data_from_github("heatmap_data.RData")
+results <- load_data_from_github("fight_results.RData")
+bt_abilities <- load_data_from_github("bt_abilities.RData")
 
 
 # summarise data by food type
