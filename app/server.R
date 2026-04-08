@@ -271,7 +271,7 @@ server <- function(input, output, session) {
     })
 
     # Matchup plot
-    output$matchup_plot <- renderPlot({
+    output$matchup_plot <- renderPlotly({
         # Get league table order (best to worst by win percentage)
         league_order <- league_table$product1
 
@@ -288,7 +288,7 @@ server <- function(input, output, session) {
 
         # Note: x = Product2 (opponent), y = Product1 (winner)
         # Value shows how often y-axis item beats x-axis item
-        ggplot(fight_matrix_long, aes(x = Product2, y = Product1, fill = WinPercentage)) +
+        p <- ggplot(fight_matrix_long, aes(x = Product2, y = Product1, fill = WinPercentage)) +
             geom_tile() +
             geom_text(aes(label = round(WinPercentage, 0)), size = 2.5, color = "white") +
             scale_fill_viridis_c(name = "Win %") +
@@ -304,6 +304,9 @@ server <- function(input, output, session) {
                 axis.text.y = element_text(size = 8),
                 legend.position = "right"
             )
+
+        # Convert to interactive plotly
+        ggplotly(p, tooltip = c("x", "y", "fill"))
     })
 
     output$correlation_plot <- renderPlot({
@@ -609,7 +612,7 @@ server <- function(input, output, session) {
     observeEvent(input$nav_bt, {
         updateTabItems(session, "tabs", "bt_analysis")
     })
-    
+
     observeEvent(input$nav_about, {
         updateTabItems(session, "tabs", "about")
     })

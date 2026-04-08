@@ -237,7 +237,7 @@ ui <- dashboardPage(
                         "Matchup Plot",
                         textOutput("matchup_description"),
                         br(),
-                        plotOutput("matchup_plot")
+                        plotlyOutput("matchup_plot")
                     ),
                     tabPanel(
                         "Box Plot",
