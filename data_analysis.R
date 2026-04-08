@@ -24,7 +24,7 @@ cat("Starting data processing...\n")
 # read in raw data from Google Sheets
 google_sheet_url <- "https://docs.google.com/spreadsheets/d/1XKThbLwFV3W1njaK7lmY_SDTLs8urt78jFYkreXa7NA/edit?usp=sharing"
 
-try(
+tryCatch(
     {
         cat("Reading Google Sheets data...\n")
         raw_potato_data <- read_sheet(google_sheet_url) |>
