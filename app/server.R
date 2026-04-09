@@ -88,7 +88,7 @@ server <- function(input, output, session) {
             combined_data
         },
         options = list(
-            pageLength = 35,
+            pageLength = 50,
             searching = TRUE,
             ordering = TRUE,
             info = TRUE,
@@ -170,7 +170,7 @@ server <- function(input, output, session) {
             bt_table_data
         },
         options = list(
-            pageLength = 35,
+            pageLength = 50,
             searching = FALSE,
             ordering = FALSE,
             info = FALSE,
@@ -609,7 +609,7 @@ server <- function(input, output, session) {
     observeEvent(input$nav_bt, {
         updateTabItems(session, "tabs", "bt_analysis")
     })
-    
+
     observeEvent(input$nav_about, {
         updateTabItems(session, "tabs", "about")
     })
