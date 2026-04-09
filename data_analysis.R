@@ -27,15 +27,63 @@ google_sheet_url <- "https://docs.google.com/spreadsheets/d/1XKThbLwFV3W1njaK7lm
 tryCatch(
     {
         cat("Reading Google Sheets data...\n")
-        raw_potato_data <- read_sheet(google_sheet_url) |>
+        raw_data <- read_sheet(google_sheet_url)
+
+        # Debug: Print column names to understand structure
+        cat("Column names:", paste(names(raw_data), collapse = ", "), "\n")
+        cat("Total columns:", ncol(raw_data), "\n")
+
+        # Automatically detect food rating columns (typically numeric columns after Timestamp and Name)
+        # Skip first 2 columns (Timestamp, Name) and find columns that contain numeric ratings
+        food_cols <- names(raw_data)[3:ncol(raw_data)]
+
+        # Filter out any non-food columns (e.g., demographic questions, text responses)
+        # Look for columns that contain mostly numeric values between 1-10
+        numeric_cols <- c()
+        for (col in food_cols) {
+            col_data <- raw_data[[col]]
+            # Check if column contains mostly numeric values in rating range (1-10)
+            numeric_values <- as.numeric(col_data)
+            if (sum(!is.na(numeric_values)) > 0) {
+                # Check if the numeric values are in a reasonable rating range
+                valid_ratings <- numeric_values[!is.na(numeric_values)]
+                if (length(valid_ratings) > 0 && min(valid_ratings) >= 1 && max(valid_ratings) <= 10) {
+                    numeric_cols <- c(numeric_cols, col)
+                }
+            }
+        }
+
+        cat("Found", length(numeric_cols), "food rating columns\n")
+        cat(
+            "Food columns:", paste(numeric_cols[1:min(5, length(numeric_cols))], collapse = ", "),
+            if (length(numeric_cols) > 5) "..." else "", "\n"
+        )
+
+        # Create the long format data using only the detected food columns
+        raw_potato_data <- raw_data |>
+            select(Timestamp, Name, all_of(numeric_cols)) |>
             pivot_longer(
-                cols = 3:36,
+                cols = all_of(numeric_cols),
                 names_to = "food_type",
                 values_to = "score"
-            )
+            ) |>
+            filter(!is.na(score)) |> # Remove any missing ratings
+            mutate(score = as.numeric(score)) |> # Ensure scores are numeric
+            filter(score >= 1 & score <= 10) # Filter valid ratings only
+
+        # Validate we have sufficient data
+        if (length(numeric_cols) == 0) {
+            stop("No valid food rating columns found. Check your Google Sheet structure.")
+        }
+
+        if (nrow(raw_potato_data) == 0) {
+            stop("No valid rating data found after filtering.")
+        }
 
         cat("Data successfully read from Google Sheets\n")
         cat(paste("Rows:", nrow(raw_potato_data), "\n"))
+        cat(paste("Unique foods:", length(unique(raw_potato_data$food_type)), "\n"))
+        cat(paste("Unique respondents:", length(unique(raw_potato_data$Name)), "\n"))
 
         # Create directory if it doesn't exist
         if (!dir.exists("app/data")) {
